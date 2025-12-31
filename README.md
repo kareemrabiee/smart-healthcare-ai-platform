@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🏥 Smart Healthcare AI Platform
 
 An AI-powered healthcare web application for keratoconus detection and smart patient management.
