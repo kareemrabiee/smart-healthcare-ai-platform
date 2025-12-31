@@ -1,56 +1,81 @@
-# 🏥 Smart Healthcare AI Platform
+# 🏥 Smart Healthcare AI-Enhanced Patient Care Platform
 
-An AI-powered healthcare web application for keratoconus detection and smart patient management.
+An AI-powered healthcare web application designed to assist in the early detection of **Keratoconus** using deep learning, while also providing smart patient management and secure doctor-patient interaction.
+
+This project was developed as a **Graduation Project** at the Faculty of Computers & Artificial Intelligence.
 
 ---
 
 ## 📌 Project Overview
-This project is a graduation project developed at the Faculty of Computers & Artificial Intelligence.
-It uses Artificial Intelligence to assist doctors in diagnosing keratoconus from corneal images.
+
+The Smart Healthcare AI Platform aims to improve healthcare efficiency by combining:
+- Artificial Intelligence for medical image analysis
+- Secure web-based patient management
+- Doctor-assisted diagnosis and reporting
+
+The system focuses on analyzing corneal topography images to support doctors in detecting keratoconus with high accuracy.
 
 ---
 
-## 🚀 Features
-- AI-based keratoconus detection
-- Patient & doctor authentication
-- Secure medical data handling
-- Diagnosis reports generation
-- User-friendly dashboard
+## 🚀 Key Features
+
+- 🤖 AI-based Keratoconus detection from corneal images  
+- 👤 User authentication (Patients / Doctors / Admin)  
+- 📊 Medical data visualization and diagnosis reports  
+- 💬 Secure messaging between patients and doctors  
+- 🔐 Role-Based Access Control (RBAC)  
+- 📄 Downloadable diagnostic reports  
+
+---
+
+## 🧠 AI Model Details
+
+- Architecture: **MobileNetV2 (Transfer Learning)**
+- Framework: TensorFlow / Keras
+- Input Size: 96×96 RGB images
+- Accuracy: **93.2%**
+- Sensitivity: **95.2%**
+- Specificity: **91.2%**
+
+The model analyzes corneal images and extracts medical features to assist in clinical decision-making.
 
 ---
 
 ## 🛠️ Tech Stack
+
+### Backend
 - Python
 - Flask
-- TensorFlow
+- Flask-Login
 - SQLAlchemy
-- HTML, CSS, JavaScript
+
+### AI & Machine Learning
+- TensorFlow
+- Keras
+- NumPy
+
+### Frontend
+- HTML5
+- CSS3
+- JavaScript
+- Bootstrap
+
+### Database
 - SQLite
 
 ---
 
-## ▶️ How to Run the Project
+## ▶️ How to Run the Project Locally
 
 ```bash
+# Clone the repository
 git clone https://github.com/kareemrabiee/smart-healthcare-ai-platform.git
+
+# Navigate to the project folder
 cd smart-healthcare-ai-platform
-=======
-Smart Healthcare AI Platform
 
-AI-powered healthcare web application for keratoconus detection and patient management.
-
-Features
-- AI-based medical image diagnosis
-- Patient & doctor authentication
-- Secure medical data management
-
-Tech Stack
-- Python
-- Flask
-- TensorFlow
-- HTML / CSS / JavaScript
-
-How to Run
->>>>>>> a0a69d43980570a34ea3e94bc38ec7a0f9c04963
+# Install dependencies
 pip install -r requirements.txt
+
+# Run the application
 python app.py
