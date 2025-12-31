@@ -1,0 +1,23 @@
+Keratoconus Detection Dataset Summary
+===================================
+
+Train Set:
+  - Normal: 980 images
+  - Keratoconus: 980 images
+  - Total: 1960 images
+
+Val Set:
+  - Normal: 210 images
+  - Keratoconus: 210 images
+  - Total: 420 images
+
+Test Set:
+  - Normal: 210 images
+  - Keratoconus: 210 images
+  - Total: 420 images
+
+Total Set:
+  - Normal: 1400 images
+  - Keratoconus: 1400 images
+  - Total: 2800 images
+

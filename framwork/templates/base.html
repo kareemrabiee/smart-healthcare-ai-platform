@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}نظام الكشف عن القرنية المخروطية{% endblock %}</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="{{ 'auth-page' if not current_user.is_authenticated else '' }}">
+    {% if current_user.is_authenticated %}
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logos-container">
+                <img src="{{ url_for('static', filename='images/logo1.png') }}" alt="Logo 1" class="nav-logo">
+                <img src="{{ url_for('static', filename='images/logo2.png') }}" alt="Logo 2" class="nav-logo">
+            </div>
+            <h2>Smart Healthcare</h2>
+        </div>
+        <ul class="nav-links">
+            {% if current_user.role == 'admin' %}
+            <li class="{{ 'active' if request.endpoint == 'admin_dashboard' else '' }}">
+                <a href="{{ url_for('admin_dashboard') }}">
+                    <i class="fas fa-chart-line"></i>
+                    <span>لوحة التحكم</span>
+                </a>
+            </li>
+            <li class="{{ 'active' if request.endpoint == 'manage_users' else '' }}">
+                <a href="{{ url_for('manage_users') }}">
+                    <i class="fas fa-users"></i>
+                    <span>إدارة المستخدمين</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="{{ 'active' if request.endpoint == 'user_dashboard' else '' }}">
+                <a href="{{ url_for('user_dashboard') }}">
+                    <i class="fas fa-home"></i>
+                    <span>الرئيسية</span>
+                </a>
+            </li>
+            <li class="{{ 'active' if request.endpoint == 'upload_file' else '' }}">
+                <a href="{{ url_for('upload_file') }}">
+                    <i class="fas fa-upload"></i>
+                    <span>فحص جديد</span>
+                </a>
+            </li>
+            {% endif %}
+            <li>
+                <a href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>تسجيل الخروج</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+    <div class="main-container {{ 'auth-main' if not current_user.is_authenticated else '' }}">
+        {% if current_user.is_authenticated %}
+        <header class="top-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="بحث..." id="searchInput" onkeydown="if(event.key === 'Enter') performSearch()">
+            </div>
+            <div class="user-info">
+                <div class="notifications" onclick="toggleNotificationsMenu()">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge">3</span>
+                    <div class="notifications-menu" id="notificationsMenu">
+                        <div class="notifications-header">
+                            <h3>الإشعارات</h3>
+                            <span>3 إشعارات جديدة</span>
+                        </div>
+                        <div class="notification-item unread">
+                            <div class="notification-icon"><i class="fas fa-file-medical"></i></div>
+                            <div class="notification-content">
+                                <p>تم إكمال فحص جديد بنجاح</p>
+                                <span class="notification-time">منذ 10 دقائق</span>
+                            </div>
+                        </div>
+                        <div class="notification-item unread">
+                            <div class="notification-icon"><i class="fas fa-user-md"></i></div>
+                            <div class="notification-content">
+                                <p>تم تعيين موعد مراجعة جديد</p>
+                                <span class="notification-time">منذ 30 دقيقة</span>
+                            </div>
+                        </div>
+                        <div class="notification-item unread">
+                            <div class="notification-icon"><i class="fas fa-comment-medical"></i></div>
+                            <div class="notification-content">
+                                <p>رسالة جديدة من الدكتور</p>
+                                <span class="notification-time">منذ ساعة</span>
+                            </div>
+                        </div>
+                        <div class="notifications-footer">
+                            <a href="#">عرض كل الإشعارات</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile" onclick="toggleProfileMenu()">
+                    <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="Profile">
+                    <span>{{ current_user.username }}</span>
+                    <i class="fas fa-chevron-down"></i>
+                    <div class="profile-menu" id="profileMenu">
+                        <a href="#"><i class="fas fa-user"></i> الملف الشخصي</a>
+                        <a href="#"><i class="fas fa-cog"></i> الإعدادات</a>
+                        <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+        {% endif %}
+
+        <main class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <footer class="main-footer">
+        <div class="footer-content">
+            <div class="footer-header">
+                <h2>Smart Healthcare</h2>
+                <p>AI-Enhanced Patient Care Platform</p>
+            </div>
+            
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h3>Students</h3>
+                    <ul class="students-list">
+                        <li>Hussein Mohamed Youssef El-Menshawy <span>808965854</span></li>
+                        <li>Bassam Hamdy Ibrahim Mohamed Shehab <span>808967295</span></li>
+                        <li>Mohamed Alaa El-Din Saleh Ali Saleh <span>808967525</span></li>
+                        <li>Omar Samah Ibrahim El-Mowafi <span>808967631</span></li>
+                        <li>Mohamed Adel Fathy Ahmed Senour <span>808967635</span></li>
+                        <li>Karim Rabie Fathallah El-Adl <span>808971309</span></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Supervisor</h3>
+                    <p class="supervisor">Prof. Dr. Ahmed El-Harbi</p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>A project report submitted in partial fulfillment of the requirements</p>
+                <p>for B.Sc. degree in Computer Science and Artificial Intelligence</p>
+                <p class="year">2024/2025</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

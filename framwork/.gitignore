@@ -1,0 +1,19 @@
+# Virtual Environment
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Database & uploads
+site.db
+uploads/
+
+# AI model files
+*.keras
+*.h5
+
+# OS files
+.DS_Store
+Thumbs.db

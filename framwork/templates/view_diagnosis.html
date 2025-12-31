@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}معاينة التشخيص{% endblock %}
+
+{% block content %}
+<div class="diagnosis-view">
+    <div class="diagnosis-header">
+        <h1>تفاصيل التشخيص</h1>
+        <div class="diagnosis-meta">
+            <span>{{ diagnosis.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            <span>{{ diagnosis.patient.username }}</span>
+        </div>
+    </div>
+
+    <div class="diagnosis-content">
+        <div class="image-section">
+            <h3>صورة الفحص</h3>
+            <img src="{{ url_for('static', filename=diagnosis.image_path.split('/')[-2:] | join('/')) }}" 
+                 alt="صورة الفحص" class="diagnosis-image">
+        </div>
+
+        <div class="results-section">
+            <h3>نتائج التحليل</h3>
+            <div class="result-item">
+                <span class="label">النتيجة:</span>
+                <span class="diagnosis-badge {{ diagnosis.prediction.lower() }}">
+                    {{ {'Normal': 'طبيعي', 'Suspect': 'مشتبه به', 'Keratoconus': 'قرنية مخروطية'}[diagnosis.prediction] }}
+                </span>
+            </div>
+
+            <div class="probabilities">
+                <div class="prob-item">
+                    <label>طبيعي</label>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: {{ diagnosis.probability_normal * 100 }}%"></div>
+                    </div>
+                    <span>{{ "%.1f"|format(diagnosis.probability_normal * 100) }}%</span>
+                </div>
+                <div class="prob-item">
+                    <label>مشتبه به</label>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: {{ diagnosis.probability_suspect * 100 }}%"></div>
+                    </div>
+                    <span>{{ "%.1f"|format(diagnosis.probability_suspect * 100) }}%</span>
+                </div>
+                <div class="prob-item">
+                    <label>قرنية مخروطية</label>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: {{ diagnosis.probability_keratoconus * 100 }}%"></div>
+                    </div>
+                    <span>{{ "%.1f"|format(diagnosis.probability_keratoconus * 100) }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="notes-section">
+            <h3>ملاحظات الطبيب</h3>
+            <p>{{ diagnosis.doctor_notes or 'لا توجد ملاحظات' }}</p>
+            {% if current_user.role == 'admin' %}
+            <button class="btn-primary" onclick="addNote({{ diagnosis.id }})">
+                <i class="fas fa-edit"></i>
+                إضافة/تعديل الملاحظات
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="actions-section">
+        <button class="btn-primary" onclick="generateReport({{ diagnosis.id }})">
+            <i class="fas fa-file-pdf"></i>
+            تصدير التقرير
+        </button>
+        <button class="btn-secondary" onclick="history.back()">
+            <i class="fas fa-arrow-right"></i>
+            رجوع
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addNote(diagnosisId) {
+    Swal.fire({
+        title: 'إضافة/تعديل الملاحظات',
+        input: 'textarea',
+        inputLabel: 'ملاحظات الطبيب',
+        inputValue: '{{ diagnosis.doctor_notes or "" }}',
+        showCancelButton: true,
+        confirmButtonText: 'حفظ',
+        cancelButtonText: 'إلغاء',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'يرجى إدخال الملاحظات';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('note', result.value);
+            
+            fetch(`/diagnosis/${diagnosisId}/note`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم!',
+                        text: 'تم حفظ الملاحظات بنجاح',
+                        confirmButtonText: 'حسناً'
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ!',
+                    text: 'حدث خطأ أثناء حفظ الملاحظات',
+                    confirmButtonText: 'حسناً'
+                });
+            });
+        }
+    });
+}
+
+function generateReport(diagnosisId) {
+    Swal.fire({
+        title: 'جاري إنشاء التقرير...',
+        text: 'يرجى الانتظار',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+            window.location.href = `/diagnosis/${diagnosisId}/report`;
+        }
+    });
+}
+
+// تحسين عرض الصورة عند الضغط عليها
+document.querySelector('.diagnosis-image').addEventListener('click', function() {
+    Swal.fire({
+        imageUrl: this.src,
+        imageAlt: 'صورة الفحص',
+        width: '80%',
+        padding: '3em',
+        showConfirmButton: false,
+        showCloseButton: true
+    });
+});
+</script>
+{% endblock %} 

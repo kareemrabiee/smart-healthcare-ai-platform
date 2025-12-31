@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة تحكم الأدمن{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <!-- رأس الصفحة -->
+    <div class="admin-header">
+        <div class="header-info">
+            <h1>مرحباً، {{ current_user.username }}</h1>
+            <p>{{ current_time.strftime('%A %d %B %Y') }}</p>
+        </div>
+        <div class="admin-quick-actions">
+            <a href="{{ url_for('add_doctor') }}" class="quick-action-btn">
+                <i class="fas fa-user-plus"></i>
+                إضافة طبيب
+            </a>
+            <a href="{{ url_for('export_reports') }}" class="quick-action-btn">
+                <i class="fas fa-download"></i>
+                تصدير التقارير
+            </a>
+        </div>
+    </div>
+
+    <!-- الإحصائيات -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: var(--primary-light)">
+                <i class="fas fa-users" style="color: var(--primary-color)"></i>
+            </div>
+            <div class="stat-info">
+                <h3>إجمالي المرضى</h3>
+                <p class="stat-number">{{ total_users }}</p>
+                <span class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    12% من الشهر الماضي
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: var(--primary-light)">
+                <i class="fas fa-stethoscope" style="color: var(--primary-color)"></i>
+            </div>
+            <div class="stat-info">
+                <h3>الفحوصات اليوم</h3>
+                <p class="stat-number">{{ today_diagnoses }}</p>
+                <span class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    5 فحوصات جديدة
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: var(--primary-light)">
+                <i class="fas fa-exclamation-triangle" style="color: var(--warning-color)"></i>
+            </div>
+            <div class="stat-info">
+                <h3>حالات تحتاج المتابعة</h3>
+                <p class="stat-number">{{ suspect_cases }}</p>
+                <span class="stat-change negative">
+                    <i class="fas fa-arrow-down"></i>
+                    2 حالات تمت معالجتها
+                </span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: var(--primary-light)">
+                <i class="fas fa-clock" style="color: var(--primary-color)"></i>
+            </div>
+            <div class="stat-info">
+                <h3>متوسط وقت التشخيص</h3>
+                <p class="stat-number">2.5 دقيقة</p>
+                <span class="stat-change positive">
+                    <i class="fas fa-arrow-down"></i>
+                    تحسن بنسبة 30%
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- الرسوم البيانية -->
+    <div class="charts-grid">
+        <div class="chart-container">
+            <h3>توزيع التشخيصات</h3>
+            <canvas id="diagnosisChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>معدل الفحوصات</h3>
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- أحدث الفحوصات -->
+    <div class="recent-section">
+        <div class="section-header">
+            <h2>أحدث الفحوصات</h2>
+            <div class="header-actions">
+                <button class="btn-outline" onclick="showFilterOptions()">
+                    <i class="fas fa-filter"></i>
+                    تصفية
+                </button>
+                <button class="btn-outline" onclick="exportDiagnosesTable()">
+                    <i class="fas fa-download"></i>
+                    تصدير
+                </button>
+                <a href="{{ url_for('reload_model') }}" class="btn-outline btn-warning">
+                    <i class="fas fa-sync"></i>
+                    إعادة تحميل النموذج
+                </a>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>المريض</th>
+                        <th>وقت الفحص</th>
+                        <th>النتيجة</th>
+                        <th>نسبة التأكد</th>
+                        <th>الطبيب المشرف</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for diagnosis in recent_diagnoses %}
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="صورة المريض">
+                                <div>
+                                    <strong>{{ diagnosis.patient.username }}</strong>
+                                    <small>{{ diagnosis.patient.email }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="diagnosis-time">
+                                <strong>{{ diagnosis.created_at.strftime('%H:%M') }}</strong>
+                                <small>{{ diagnosis.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="diagnosis-badge {{ diagnosis.prediction.lower() }}">
+                                {{ {'Normal': 'طبيعي', 'Suspect': 'مشتبه به', 'Keratoconus': 'قرنية مخروطية'}[diagnosis.prediction] }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="confidence-bar">
+                                <div class="progress" style="width: {{ diagnosis.confidence }}%"></div>
+                                <span>{{ diagnosis.confidence }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="doctor-info">
+                                <span>{{ current_user.username }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-icon" onclick="viewDiagnosis('{{ diagnosis.id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-icon" onclick="addNote('{{ diagnosis.id }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon" onclick="generateReport('{{ diagnosis.id }}')">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- إضافة Chart.js قبل الملفات الأخرى -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+// معاينة التشخيص
+function viewDiagnosis(diagnosisId) {
+    window.location.href = `/diagnosis/${diagnosisId}/view`;
+}
+
+// إضافة ملاحظات
+function addNote(diagnosisId) {
+    Swal.fire({
+        title: 'إضافة ملاحظات',
+        input: 'textarea',
+        inputLabel: 'الملاحظات',
+        showCancelButton: true,
+        confirmButtonText: 'حفظ',
+        cancelButtonText: 'إلغاء',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'يرجى إدخال الملاحظات';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData();
+            formData.append('note', result.value);
+            
+            fetch(`/diagnosis/${diagnosisId}/note`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم!',
+                        text: 'تم حفظ الملاحظات بنجاح',
+                        confirmButtonText: 'حسناً'
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ!',
+                    text: 'حدث خطأ أثناء حفظ الملاحظات',
+                    confirmButtonText: 'حسناً'
+                });
+            });
+        }
+    });
+}
+
+// تصدير التقرير
+function generateReport(diagnosisId) {
+    Swal.fire({
+        title: 'جاري إنشاء التقرير...',
+        text: 'يرجى الانتظار',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+            window.location.href = `/diagnosis/${diagnosisId}/report`;
+        }
+    });
+}
+
+// تعديل بيانات المستخدم
+function editUser(userId) {
+    fetch(`/user/${userId}/edit`)
+    .then(response => response.json())
+    .then(user => {
+        Swal.fire({
+            title: 'تعديل بيانات المستخدم',
+            html: `
+                <form id="editUserForm">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="username" class="swal2-input" value="${user.username}">
+                    </div>
+                    <div class="form-group">
+                        <label>البريد الإلكتروني</label>
+                        <input type="email" id="email" class="swal2-input" value="${user.email}">
+                    </div>
+                </form>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'حفظ',
+            cancelButtonText: 'إلغاء',
+            preConfirm: () => {
+                const username = document.getElementById('username').value;
+                const email = document.getElementById('email').value;
+                return fetch(`/user/${userId}/edit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    return data;
+                });
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire('تم!', 'تم تحديث البيانات بنجاح', 'success')
+                .then(() => location.reload());
+            }
+        }).catch(error => {
+            Swal.showValidationMessage(error.message);
+        });
+    });
+}
+
+// حذف مستخدم
+function deleteUser(userId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'سيتم حذف المستخدم نهائياً',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/user/${userId}/delete`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('تم!', 'تم حذف المستخدم بنجاح', 'success')
+                    .then(() => location.reload());
+                }
+            });
+        }
+    });
+}
+
+// عرض سجل المريض
+function viewPatientHistory(patientId) {
+    window.location.href = `/patient/${patientId}/history`;
+}
+
+// عرض خيارات التصفية
+function showFilterOptions() {
+    Swal.fire({
+        title: 'تصفية النتائج',
+        html: `
+            <form id="filterForm" class="filter-form">
+                <div class="form-group">
+                    <label>نوع التشخيص</label>
+                    <select id="filterType" class="swal2-select">
+                        <option value="">الكل</option>
+                        <option value="normal">طبيعي</option>
+                        <option value="suspect">مشتبه به</option>
+                        <option value="keratoconus">قرنية مخروطية</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>التاريخ من</label>
+                    <input type="date" id="dateFrom" class="swal2-input">
+                </div>
+                <div class="form-group">
+                    <label>التاريخ إلى</label>
+                    <input type="date" id="dateTo" class="swal2-input">
+                </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'تطبيق',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+            return {
+                type: document.getElementById('filterType').value,
+                dateFrom: document.getElementById('dateFrom').value,
+                dateTo: document.getElementById('dateTo').value
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            applyFilters(result.value);
+        }
+    });
+}
+
+// تطبيق عوامل التصفية
+function applyFilters(filters) {
+    const rows = document.querySelectorAll('.table tbody tr');
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        let showRow = true;
+        
+        // تصفية حسب النوع
+        if (filters.type) {
+            const diagnosisType = row.querySelector('.diagnosis-badge').classList[1];
+            if (diagnosisType !== filters.type) {
+                showRow = false;
+            }
+        }
+        
+        // تصفية حسب التاريخ
+        if (filters.dateFrom || filters.dateTo) {
+            const dateText = row.querySelector('.diagnosis-time small').textContent;
+            const rowDate = new Date(dateText);
+            
+            if (filters.dateFrom && new Date(filters.dateFrom) > rowDate) {
+                showRow = false;
+            }
+            
+            if (filters.dateTo && new Date(filters.dateTo) < rowDate) {
+                showRow = false;
+            }
+        }
+        
+        // إظهار أو إخفاء الصف
+        row.style.display = showRow ? '' : 'none';
+        if (showRow) visibleCount++;
+    });
+    
+    if (visibleCount === 0) {
+        Swal.fire({
+            title: 'لا توجد نتائج',
+            text: 'لا توجد فحوصات تطابق معايير التصفية',
+            icon: 'info',
+            confirmButtonText: 'حسناً'
+        });
+    } else {
+        Swal.fire({
+            title: 'تم',
+            text: `تم عرض ${visibleCount} من النتائج`,
+            icon: 'success',
+            confirmButtonText: 'حسناً'
+        });
+    }
+}
+
+// تصدير جدول الفحوصات
+function exportDiagnosesTable() {
+    Swal.fire({
+        title: 'تصدير البيانات',
+        html: `
+            <p>اختر تنسيق التصدير:</p>
+            <div class="export-options">
+                <button id="exportCSV" class="btn-primary">
+                    <i class="fas fa-file-csv"></i> تصدير CSV
+                </button>
+                <button id="exportCurrentView" class="btn-secondary">
+                    <i class="fas fa-file"></i> تصدير العناصر المعروضة فقط
+                </button>
+            </div>
+        `,
+        showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'إلغاء',
+        didOpen: () => {
+            document.getElementById('exportCSV').addEventListener('click', () => {
+                // استخدام الـ API الموجود للتصدير
+                window.location.href = "/export_reports";
+                Swal.close();
+            });
+            
+            document.getElementById('exportCurrentView').addEventListener('click', () => {
+                exportCurrentTableView();
+                Swal.close();
+            });
+        }
+    });
+}
+
+// تصدير العناصر المعروضة حالياً في الجدول
+function exportCurrentTableView() {
+    // الحصول على البيانات من الجدول المعروض حالياً
+    const table = document.querySelector('.table');
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    
+    let rows = [];
+    const visibleRows = table.querySelectorAll('tbody tr:not([style*="display: none"])');
+    
+    visibleRows.forEach(row => {
+        const patientInfo = row.querySelector('.user-info div strong').textContent;
+        const diagnosisTime = row.querySelector('.diagnosis-time small').textContent;
+        const diagnosisResult = row.querySelector('.diagnosis-badge').textContent.trim();
+        const confidence = row.querySelector('.confidence-bar span').textContent;
+        const doctor = row.querySelector('.doctor-info span').textContent;
+        
+        rows.push([patientInfo, diagnosisTime, diagnosisResult, confidence, doctor]);
+    });
+    
+    // إنشاء محتوى CSV
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += headers.join(",") + "\n";
+    
+    rows.forEach(row => {
+        csvContent += row.join(",") + "\n";
+    });
+    
+    // تنزيل الملف
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "diagnoses_filtered.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    Swal.fire({
+        title: 'تم',
+        text: 'تم تصدير البيانات بنجاح',
+        icon: 'success',
+        confirmButtonText: 'حسناً'
+    });
+}
+</script>
+{% endblock %} 

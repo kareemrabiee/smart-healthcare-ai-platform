@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الكشف عن القرنية المخروطية | Smart Healthcare AI</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- القائمة الجانبية -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="logo">
+            <h2>Smart Healthcare</h2>
+        </div>
+        <ul class="nav-links">
+            <li class="active">
+                <a href="{{ url_for('upload_file') }}">
+                    <i class="fas fa-home"></i>
+                    <span>الرئيسية</span>
+                </a>
+            </li>
+            <li>
+                <a href="#about">
+                    <i class="fas fa-info-circle"></i>
+                    <span>عن النظام</span>
+                </a>
+            </li>
+            <li>
+                <a href="#instructions">
+                    <i class="fas fa-book-medical"></i>
+                    <span>إرشادات الاستخدام</span>
+                </a>
+            </li>
+            <li>
+                <a href="#team">
+                    <i class="fas fa-users"></i>
+                    <span>فريق العمل</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-container">
+        <header class="top-bar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="بحث...">
+            </div>
+            <div class="user-info">
+                <div class="notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge">3</span>
+                </div>
+                <div class="profile">
+                    <img src="{{ url_for('static', filename='images/doctor-avatar.png') }}" alt="Profile">
+                    <span>{{ current_user.username }}</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="content">
+            <div class="dashboard-header">
+                <h1>نظام الكشف عن القرنية المخروطية</h1>
+                <p>قم برفع صورة الأشعة للحصول على التشخيص الفوري</p>
+            </div>
+
+            <div class="upload-section">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="upload-area" id="dropZone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>اسحب وأفلت الصورة هنا</h3>
+                        <p>أو</p>
+                        <label class="upload-btn" for="fileInput">
+                            اختر ملف
+                            <input type="file" name="file" id="fileInput" accept="image/*" hidden>
+                        </label>
+                        <p class="file-info">يدعم النظام صيغ: PNG, JPG, JPEG</p>
+                    </div>
+                </form>
+            </div>
+
+            {% if prediction %}
+            <div class="result-section animate__animated animate__fadeIn">
+                <div class="result-card">
+                    <div class="result-header">
+                        <h2>نتيجة التحليل</h2>
+                        <span class="timestamp">{{ current_time }}</span>
+                    </div>
+                    <div class="result-content">
+                        <div class="image-preview">
+                            <img src="{{ url_for('static', filename='uploads/' + img_path.split('/')[-1]) }}" alt="الصورة المحللة">
+                        </div>
+                        <div class="diagnosis">
+                            <h3>التشخيص: <span class="diagnosis-text {{ prediction.lower() }}">{{ prediction }}</span></h3>
+                            <div class="probability-bars">
+                                <div class="prob-item">
+                                    <label>طبيعي</label>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: {{ probabilities[0]*100 }}%"></div>
+                                    </div>
+                                    <span>{{ "%.1f"|format(probabilities[0]*100) }}%</span>
+                                </div>
+                                <div class="prob-item">
+                                    <label>مشتبه</label>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: {{ probabilities[1]*100 }}%"></div>
+                                    </div>
+                                    <span>{{ "%.1f"|format(probabilities[1]*100) }}%</span>
+                                </div>
+                                <div class="prob-item">
+                                    <label>قرنية مخروطية</label>
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: {{ probabilities[2]*100 }}%"></div>
+                                    </div>
+                                    <span>{{ "%.1f"|format(probabilities[2]*100) }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn-primary" onclick="generateReport()">
+                            <i class="fas fa-file-pdf"></i> تحميل التقرير
+                        </button>
+                        <button class="btn-secondary" onclick="shareResult()">
+                            <i class="fas fa-share-alt"></i> مشاركة النتيجة
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+Website Setup & Run Instructions :
+
+Steps to Run the Website:
+
+1. Install Python 3.11.
+
+2. Install Microsoft Visual C++ Redistributable
+   You will find it in the website files under the program name.
+
+3. Install the required libraries:
+
+   
+   pip install -r requirements.txt
+   
+
+4. Run the website:
+
+   
+   python app.py
+   
+
+5. Open the website in your browser at:
+
+   
+   http://127.0.0.1:5000
+   
+
+Follow the steps in order — this is very important.
+
+
+
+Default Login Credentials:
+
+Regular User
+  Username: user
+  Password: user
+
+Administrator
+  Username: admin
+  Password: admin

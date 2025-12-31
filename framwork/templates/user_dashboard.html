@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم - {{ current_user.username }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- ملخص الإحصائيات -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-file-medical"></i>
+            </div>
+            <div class="stat-info">
+                <h3>عدد الفحوصات</h3>
+                <p>{{ diagnoses|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-info">
+                <h3>حالات مشتبه بها</h3>
+                <p>{{ diagnoses|selectattr('prediction', 'equalto', 'Suspect')|list|length }}</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon danger">
+                <i class="fas fa-eye"></i>
+            </div>
+            <div class="stat-info">
+                <h3>حالات مؤكدة</h3>
+                <p>{{ diagnoses|selectattr('prediction', 'equalto', 'Keratoconus')|list|length }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- زر إجراء فحص جديد -->
+    <div class="action-bar">
+        <a href="{{ url_for('upload_file') }}" class="btn-primary">
+            <i class="fas fa-plus"></i>
+            فحص جديد
+        </a>
+    </div>
+
+    <!-- سجل الفحوصات السابقة -->
+    <div class="diagnoses-history">
+        <h2>سجل الفحوصات</h2>
+        {% if diagnoses %}
+        <div class="table-container">
+            <table class="diagnoses-table">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>الصورة</th>
+                        <th>النتيجة</th>
+                        <th>نسبة التأكد</th>
+                        <th>ملاحظات الطبيب</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for diagnosis in diagnoses %}
+                    <tr>
+                        <td>{{ diagnosis.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <img src="{{ url_for('static', filename=diagnosis.image_path.split('/')[-2:] | join('/')) }}" 
+                                 alt="صورة الفحص" class="diagnosis-thumbnail">
+                        </td>
+                        <td>
+                            <span class="diagnosis-badge {{ diagnosis.prediction.lower() }}">
+                                {{ {'Normal': 'طبيعي', 'Suspect': 'مشتبه به', 'Keratoconus': 'قرنية مخروطية'}[diagnosis.prediction] }}
+                            </span>
+                        </td>
+                        <td>
+                            {% set prob = [diagnosis.probability_normal, diagnosis.probability_suspect, diagnosis.probability_keratoconus]|max %}
+                            {{ "%.1f"|format(prob * 100) }}%
+                        </td>
+                        <td>{{ diagnosis.doctor_notes or 'لا توجد ملاحظات' }}</td>
+                        <td>
+                            <button class="btn-icon" onclick="viewDetails({{ diagnosis.id }})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="downloadReport({{ diagnosis.id }})">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-file-medical"></i>
+            <p>لا توجد فحوصات سابقة</p>
+            <a href="{{ url_for('upload_file') }}" class="btn-primary">إجراء أول فحص</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function viewDetails(diagnosisId) {
+    // عرض تفاصيل التشخيص في نافذة منبثقة
+    fetch(`/diagnosis/${diagnosisId}`)
+        .then(response => response.json())
+        .then(data => {
+            Swal.fire({
+                title: 'تفاصيل التشخيص',
+                html: `
+                    <div class="diagnosis-details">
+                        <img src="${data.image_path}" alt="صورة الفحص" class="diagnosis-image">
+                        <div class="diagnosis-info">
+                            <p><strong>النتيجة:</strong> ${data.prediction}</p>
+                            <p><strong>نسبة التأكد:</strong> ${data.probability}%</p>
+                            <p><strong>ملاحظات الطبيب:</strong> ${data.doctor_notes || 'لا توجد ملاحظات'}</p>
+                        </div>
+                    </div>
+                `,
+                width: '600px'
+            });
+        });
+}
+
+function downloadReport(diagnosisId) {
+    // تحميل تقرير PDF
+    window.location.href = `/download_report/${diagnosisId}`;
+}
+</script>
+{% endblock %} 

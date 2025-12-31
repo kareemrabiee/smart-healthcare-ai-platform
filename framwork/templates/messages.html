@@ -1,0 +1,570 @@
+{% extends "base.html" %}
+
+{% block title %}الرسائل{% endblock %}
+
+{% block content %}
+<div class="messages-container">
+    <div class="messages-header">
+        <h1>الرسائل</h1>
+        <a href="{{ url_for('send_message') }}" class="btn-primary">
+            <i class="fas fa-paper-plane"></i>
+            {% if current_user.role == 'admin' %}
+                رسالة جديدة للمريض
+            {% else %}
+                رسالة جديدة للطبيب
+            {% endif %}
+        </a>
+    </div>
+
+    <div class="messages-tabs">
+        <button class="tab-btn active" onclick="showTab('received')">الوارد</button>
+        <button class="tab-btn" onclick="showTab('sent')">المرسل</button>
+    </div>
+
+    <div id="received" class="messages-list tab-content active">
+        {% if received %}
+            {% for message in received %}
+            <div class="message-card {% if not message.read %}unread{% endif %}">
+                <div class="message-header">
+                    <div class="sender-info">
+                        <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="avatar">
+                        <div class="sender-details">
+                            <span class="sender-name">
+                                {% if message.sender.full_name is defined and message.sender.full_name %}
+                                    {{ message.sender.full_name }}
+                                {% else %}
+                                    {{ message.sender.username }}
+                                {% endif %}
+                            </span>
+                            {% if message.sender.specialty is defined and message.sender.specialty %}
+                                <span class="sender-specialty">{{ message.sender.specialty }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="message-meta">
+                        {% if not message.read %}
+                            <span class="unread-badge">جديد</span>
+                        {% endif %}
+                        <span class="message-date">{{ message.created_at.strftime('%Y-%m-%d') }} <span class="time">{{ message.created_at.strftime('%H:%M') }}</span></span>
+                    </div>
+                </div>
+                <div class="message-content">
+                    <h3>{{ message.subject }}</h3>
+                    <p>{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
+                </div>
+                <div class="message-actions">
+                    <a href="{{ url_for('view_message', message_id=message.id) }}" class="btn-secondary">
+                        <i class="fas fa-eye"></i>
+                        عرض
+                    </a>
+                    <a href="javascript:void(0);" onclick="confirmDelete('{{ message.id }}')" class="btn-danger">
+                        <i class="fas fa-trash"></i>
+                        حذف
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>لا توجد رسائل في صندوق الوارد</p>
+                <a href="{{ url_for('send_message') }}" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                    {% if current_user.role == 'admin' %}
+                        تواصل مع مريض
+                    {% else %}
+                        تواصل مع طبيب
+                    {% endif %}
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div id="sent" class="messages-list tab-content">
+        {% if sent %}
+            {% for message in sent %}
+            <div class="message-card">
+                <div class="message-header">
+                    <div class="receiver-info">
+                        <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="avatar">
+                        <div class="receiver-details">
+                            <span class="receiver-name">
+                                {% if message.receiver.full_name is defined and message.receiver.full_name %}
+                                    {{ message.receiver.full_name }}
+                                {% else %}
+                                    {{ message.receiver.username }}
+                                {% endif %}
+                            </span>
+                            {% if message.receiver.specialty is defined and message.receiver.specialty %}
+                                <span class="receiver-specialty">{{ message.receiver.specialty }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="message-date">{{ message.created_at.strftime('%Y-%m-%d') }} <span class="time">{{ message.created_at.strftime('%H:%M') }}</span></span>
+                </div>
+                <div class="message-content">
+                    <h3>{{ message.subject }}</h3>
+                    <p>{{ message.content[:100] }}{% if message.content|length > 100 %}...{% endif %}</p>
+                </div>
+                <div class="message-actions">
+                    <a href="{{ url_for('view_message', message_id=message.id) }}" class="btn-secondary">
+                        <i class="fas fa-eye"></i>
+                        عرض
+                    </a>
+                    <a href="javascript:void(0);" onclick="confirmDelete('{{ message.id }}')" class="btn-danger">
+                        <i class="fas fa-trash"></i>
+                        حذف
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-paper-plane"></i>
+                <p>لا توجد رسائل مرسلة</p>
+                <a href="{{ url_for('send_message') }}" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                    {% if current_user.role == 'admin' %}
+                        أرسل رسالة لمريض
+                    {% else %}
+                        أرسل رسالة لطبيب
+                    {% endif %}
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- مربع حوار تأكيد الحذف -->
+<div id="deleteConfirmModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>تأكيد الحذف</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>هل أنت متأكد من رغبتك في حذف هذه الرسالة؟</p>
+            <p class="warning-text">لا يمكن التراجع عن هذا الإجراء.</p>
+        </div>
+        <div class="modal-footer">
+            <button id="confirmDeleteBtn" class="btn-danger">
+                <i class="fas fa-trash"></i>
+                نعم، حذف الرسالة
+            </button>
+            <button id="cancelDeleteBtn" class="btn-secondary">
+                <i class="fas fa-times"></i>
+                إلغاء
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .messages-container {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        margin: 30px auto;
+        max-width: 1400px;
+        width: 97%;
+    }
+    
+    .messages-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 25px;
+    }
+    
+    .messages-header h1 {
+        font-size: 28px;
+        color: #333;
+        margin: 0;
+    }
+    
+    .messages-tabs {
+        display: flex;
+        border-bottom: 2px solid #eee;
+        margin-bottom: 30px;
+    }
+    
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 18px 30px;
+        cursor: pointer;
+        font-weight: bold;
+        position: relative;
+        color: #666;
+        font-size: 18px;
+        transition: color 0.2s ease;
+    }
+    
+    .tab-btn:hover {
+        color: #4CAF50;
+    }
+    
+    .tab-btn.active {
+        color: #4CAF50;
+    }
+    
+    .tab-btn.active:after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        right: 0;
+        left: 0;
+        height: 4px;
+        background-color: #4CAF50;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .messages-list {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .message-card {
+        border: 1px solid #eee;
+        border-radius: 12px;
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 5px;
+    }
+    
+    .message-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+    
+    .message-card.unread {
+        border-right: 4px solid #4CAF50;
+        background-color: #f7fdf7;
+    }
+    
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .sender-info, .receiver-info {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+    
+    .sender-info img, .receiver-info img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #4CAF50;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sender-details, .receiver-details {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .sender-name, .receiver-name {
+        font-weight: bold;
+        color: #333;
+        font-size: 18px;
+        margin-bottom: 5px;
+    }
+    
+    .sender-specialty, .receiver-specialty {
+        font-size: 14px;
+        color: #4CAF50;
+        background-color: #e8f5e9;
+        padding: 4px 12px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    
+    .message-meta {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .unread-badge {
+        background-color: #4CAF50;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+    }
+    
+    .message-date {
+        color: #777;
+        font-size: 14px;
+    }
+    
+    .time {
+        color: #999;
+    }
+    
+    .message-content {
+        padding: 10px 0;
+    }
+    
+    .message-content h3 {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 20px;
+    }
+    
+    .message-content p {
+        margin: 0;
+        color: #555;
+        line-height: 1.7;
+        font-size: 16px;
+        padding: 0 5px;
+    }
+    
+    .message-actions {
+        align-self: flex-start;
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .btn-primary, .btn-secondary, .btn-danger {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 22px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.2s ease;
+        font-size: 16px;
+    }
+    
+    .btn-primary {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: #388E3C;
+        transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+        background-color: #f2f2f2;
+        color: #333;
+        border: 1px solid #ddd;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #e6e6e6;
+        transform: translateY(-2px);
+    }
+    
+    .btn-danger {
+        background-color: #f44336;
+        color: white;
+        border: none;
+    }
+    
+    .btn-danger:hover {
+        background-color: #d32f2f;
+        transform: translateY(-2px);
+    }
+    
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 100px 20px;
+        color: #777;
+        text-align: center;
+        background-color: #f9f9f9;
+        border-radius: 12px;
+        border: 1px dashed #ddd;
+        margin: 30px 0;
+    }
+    
+    .empty-state i {
+        font-size: 70px;
+        margin-bottom: 25px;
+        opacity: 0.6;
+        color: #4CAF50;
+    }
+    
+    .empty-state p {
+        margin-bottom: 30px;
+        font-size: 18px;
+    }
+    
+    .empty-state .btn-primary {
+        padding: 15px 30px;
+        font-size: 16px;
+    }
+    
+    /* أنماط مربع حوار التأكيد */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: #fff;
+        margin: 15% auto;
+        border-radius: 10px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        width: 450px;
+        max-width: 90%;
+        direction: rtl;
+        animation: modalFadeIn 0.3s;
+    }
+    
+    @keyframes modalFadeIn {
+        from {opacity: 0; transform: translateY(-20px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+    
+    .modal-header {
+        padding: 18px 25px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #f9f9f9;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 20px;
+    }
+    
+    .close-modal {
+        color: #999;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    
+    .close-modal:hover {
+        color: #333;
+    }
+    
+    .modal-body {
+        padding: 25px;
+    }
+    
+    .warning-text {
+        color: #f44336;
+        font-weight: bold;
+        font-size: 15px;
+    }
+    
+    .modal-footer {
+        padding: 18px 25px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-start;
+        gap: 15px;
+        background-color: #f9f9f9;
+        border-radius: 0 0 10px 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .message-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .message-meta {
+            align-self: flex-end;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        
+        // استخدام this.event لتجنب مشكلة عدم تحديد event في بعض المتصفحات
+        const eventTarget = event ? event.target : document.querySelector('.tab-btn[onclick*="' + tabId + '"]');
+        if (eventTarget) {
+            eventTarget.classList.add('active');
+        }
+    }
+    
+    // متغيرات للوصول إلى مربع الحوار وأزراره
+    const modal = document.getElementById('deleteConfirmModal');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    const cancelBtn = document.getElementById('cancelDeleteBtn');
+    const closeModal = document.querySelector('.close-modal');
+    let messageIdToDelete = null;
+    
+    // فتح مربع حوار التأكيد مع تمرير معرف الرسالة
+    function confirmDelete(messageId) {
+        messageIdToDelete = messageId;
+        modal.style.display = 'block';
+    }
+    
+    // تأكيد الحذف وإرسال طلب الحذف
+    confirmBtn.addEventListener('click', function() {
+        if (messageIdToDelete) {
+            window.location.href = '/message/' + messageIdToDelete + '/delete';
+        }
+    });
+    
+    // إغلاق مربع الحوار بالنقر على زر الإلغاء
+    cancelBtn.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    // إغلاق مربع الحوار بالنقر على زر الإغلاق
+    closeModal.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    // إغلاق مربع الحوار بالنقر خارجه
+    window.addEventListener('click', function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+</script>
+{% endblock %} 

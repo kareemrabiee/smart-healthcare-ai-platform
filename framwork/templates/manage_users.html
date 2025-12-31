@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة المستخدمين{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="admin-header">
+        <div class="header-info">
+            <h1>إدارة المستخدمين</h1>
+        </div>
+        <div class="admin-quick-actions">
+            <a href="{{ url_for('add_doctor') }}" class="quick-action-btn">
+                <i class="fas fa-user-plus"></i>
+                إضافة طبيب
+            </a>
+        </div>
+    </div>
+
+    <!-- قسم الأطباء -->
+    <div class="section-card">
+        <h2>الأطباء</h2>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>تاريخ الإنضمام</th>
+                        <th>عدد التشخيصات</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doctor in doctors %}
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="صورة الطبيب">
+                                <span>{{ doctor.username }}</span>
+                            </div>
+                        </td>
+                        <td>{{ doctor.email }}</td>
+                        <td>{{ doctor.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ doctor.diagnoses|length }}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-icon" onclick="editUser('{{ doctor.id }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon" onclick="deleteUser('{{ doctor.id }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- قسم المرضى -->
+    <div class="section-card">
+        <h2>المرضى</h2>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>تاريخ الإنضمام</th>
+                        <th>عدد الفحوصات</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <img src="{{ url_for('static', filename='images/avatar.png') }}" alt="صورة المريض">
+                                <span>{{ patient.username }}</span>
+                            </div>
+                        </td>
+                        <td>{{ patient.email }}</td>
+                        <td>{{ patient.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ patient.diagnoses|length }}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-icon" onclick="viewPatientHistory('{{ patient.id }}')">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                                <button class="btn-icon" onclick="editUser('{{ patient.id }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-icon" onclick="deleteUser('{{ patient.id }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editUser(userId) {
+    // تنفيذ تعديل بيانات المستخدم
+    Swal.fire({
+        title: 'تعديل بيانات المستخدم',
+        html: `
+            <form id="editUserForm">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <input type="text" id="username" class="swal2-input">
+                </div>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input type="email" id="email" class="swal2-input">
+                </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ',
+        cancelButtonText: 'إلغاء'
+    });
+}
+
+function deleteUser(userId) {
+    // تنفيذ حذف المستخدم
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: 'سيتم حذف المستخدم نهائياً',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، احذف',
+        cancelButtonText: 'إلغاء'
+    });
+}
+
+function viewPatientHistory(patientId) {
+    // عرض سجل المريض
+    window.location.href = `/patient/${patientId}/history`;
+}
+</script>
+{% endblock %} 

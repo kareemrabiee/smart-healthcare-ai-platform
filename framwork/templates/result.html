@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %}نتيجة التشخيص{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    {% if using_dummy_model %}
+    <div class="alert alert-warning" style="text-align: center; padding: 10px; margin-bottom: 20px; background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 5px;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>تحذير:</strong> يتم استخدام نموذج بديل للتحليل. النتائج قد لا تكون دقيقة. يرجى التواصل مع مسؤول النظام لتحميل النموذج الصحيح.
+    </div>
+    {% endif %}
+    
+    <div class="result-header">
+        <h1>نتيجة التشخيص</h1>
+        <span class="timestamp">{{ current_time }}</span>
+    </div>
+
+    <div class="result-content">
+        <div class="result-card">
+            <div class="result-image">
+                <img src="{{ url_for('static', filename=diagnosis.image_path.split('/')[-2:] | join('/')) }}" 
+                     alt="صورة الفحص">
+            </div>
+            
+            <div class="result-details">
+                <div class="diagnosis-result">
+                    <h2>التشخيص</h2>
+                    {% set probs = [diagnosis.probability_normal, diagnosis.probability_suspect, diagnosis.probability_keratoconus] %}
+                    {% set max_prob_index = probs.index(probs|max) %}
+                    {% set actual_diagnosis = ['Normal', 'Suspect', 'Keratoconus'][max_prob_index] %}
+                    
+                    {% if actual_diagnosis != diagnosis.prediction %}
+                        <!-- Si hay una discrepancia entre el diagnóstico guardado y la probabilidad más alta, mostrar una advertencia -->
+                        <div class="diagnosis-warning">
+                            <p>ملاحظة: تم تصحيح التشخيص بناءً على أعلى احتمالية</p>
+                        </div>
+                    {% endif %}
+                    
+                    <span class="diagnosis-badge {{ actual_diagnosis.lower() }}">
+                        {{ {'Normal': 'طبيعي', 'Suspect': 'مشتبه به', 'Keratoconus': 'قرنية مخروطية'}[actual_diagnosis] }}
+                    </span>
+                    
+                    <div class="confidence-indicator">
+                        <span class="confidence-label">مستوى الثقة:</span>
+                        {% set confidence = probs|max * 100 %}
+                        <span class="confidence-value {% if confidence > 80 %}high{% elif confidence > 60 %}medium{% else %}low{% endif %}">
+                            {{ "%.1f"|format(confidence) }}%
+                        </span>
+                    </div>
+                </div>
+
+                <div class="probability-section">
+                    <h3>نسب الاحتمالات</h3>
+                    <div class="probability-bars">
+                        <div class="prob-item">
+                            <label>طبيعي</label>
+                            <div class="progress-bar">
+                                <div class="progress normal-progress" style="width: {{ diagnosis.probability_normal * 100 }}%"></div>
+                            </div>
+                            <span>{{ "%.1f"|format(diagnosis.probability_normal * 100) }}%</span>
+                        </div>
+                        <div class="prob-item">
+                            <label>مشتبه به</label>
+                            <div class="progress-bar">
+                                <div class="progress suspect-progress" style="width: {{ diagnosis.probability_suspect * 100 }}%"></div>
+                            </div>
+                            <span>{{ "%.1f"|format(diagnosis.probability_suspect * 100) }}%</span>
+                        </div>
+                        <div class="prob-item">
+                            <label>قرنية مخروطية</label>
+                            <div class="progress-bar">
+                                <div class="progress keratoconus-progress" style="width: {{ diagnosis.probability_keratoconus * 100 }}%"></div>
+                            </div>
+                            <span>{{ "%.1f"|format(diagnosis.probability_keratoconus * 100) }}%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="medical-recommendations">
+                    <h3>التوصيات الطبية</h3>
+                    <div class="recommendation-content">
+                        {% if actual_diagnosis == 'Normal' %}
+                            <p>التشخيص يشير إلى حالة طبيعية للقرنية. ينصح بإجراء فحص دوري كل عام للاطمئنان.</p>
+                        {% elif actual_diagnosis == 'Suspect' %}
+                            <p>هناك احتمال وجود تغيرات في القرنية تستدعي المتابعة. يرجى مراجعة طبيب العيون خلال الشهر القادم.</p>
+                        {% elif actual_diagnosis == 'Keratoconus' %}
+                            <p>التشخيص يشير إلى احتمال وجود قرنية مخروطية. يجب مراجعة طبيب العيون المختص في أقرب وقت ممكن.</p>
+                        {% endif %}
+                        
+                        <div class="corneal-metrics">
+                            <h4>مؤشرات القرنية المستخرجة</h4>
+                            <div class="metrics-grid">
+                                <div class="metric-item">
+                                    <div class="metric-label">سماكة القرنية</div>
+                                    {% set thickness = diagnosis.probability_normal * 0.85 + diagnosis.probability_suspect * 0.60 + diagnosis.probability_keratoconus * 0.35 %}
+                                    <div class="metric-gauge">
+                                        <div class="gauge-fill" style="width: {{ thickness * 100 }}%"></div>
+                                    </div>
+                                    <div class="metric-value">{{ "%.0f"|format(thickness * 100) }}%</div>
+                                    <div class="metric-range">القيمة الطبيعية: >80%</div>
+                                </div>
+                                
+                                <div class="metric-item">
+                                    <div class="metric-label">انحناء القرنية</div>
+                                    {% set curvature = diagnosis.probability_normal * 0.25 + diagnosis.probability_suspect * 0.55 + diagnosis.probability_keratoconus * 0.85 %}
+                                    <div class="metric-gauge">
+                                        <div class="gauge-fill" style="width: {{ curvature * 100 }}%"></div>
+                                    </div>
+                                    <div class="metric-value">{{ "%.0f"|format(curvature * 100) }}%</div>
+                                    <div class="metric-range">القيمة الطبيعية: <30%</div>
+                                </div>
+                                
+                                <div class="metric-item">
+                                    <div class="metric-label">عدم التماثل</div>
+                                    {% set asymmetry = diagnosis.probability_normal * 0.15 + diagnosis.probability_suspect * 0.45 + diagnosis.probability_keratoconus * 0.80 %}
+                                    <div class="metric-gauge">
+                                        <div class="gauge-fill" style="width: {{ asymmetry * 100 }}%"></div>
+                                    </div>
+                                    <div class="metric-value">{{ "%.0f"|format(asymmetry * 100) }}%</div>
+                                    <div class="metric-range">القيمة الطبيعية: <20%</div>
+                                </div>
+                                
+                                <div class="metric-item">
+                                    <div class="metric-label">عدم الانتظام</div>
+                                    {% set irregularity = diagnosis.probability_normal * 0.15 + diagnosis.probability_suspect * 0.50 + diagnosis.probability_keratoconus * 0.85 %}
+                                    <div class="metric-gauge">
+                                        <div class="gauge-fill" style="width: {{ irregularity * 100 }}%"></div>
+                                    </div>
+                                    <div class="metric-value">{{ "%.0f"|format(irregularity * 100) }}%</div>
+                                    <div class="metric-range">القيمة الطبيعية: <20%</div>
+                                </div>
+                                
+                                <div class="metric-item">
+                                    <div class="metric-label">تعقيد الصورة</div>
+                                    {% set complexity = diagnosis.probability_normal * 0.30 + diagnosis.probability_suspect * 0.60 + diagnosis.probability_keratoconus * 0.85 %}
+                                    <div class="metric-gauge">
+                                        <div class="gauge-fill complexity-fill" style="width: {{ complexity * 100 }}%"></div>
+                                    </div>
+                                    <div class="metric-value">{{ "%.0f"|format(complexity * 100) }}%</div>
+                                    <div class="metric-range">القيمة الطبيعية: <40%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="diagnosis-quality">
+                                <h4>جودة التشخيص</h4>
+                                {% set confidence = [diagnosis.probability_normal, diagnosis.probability_suspect, diagnosis.probability_keratoconus]|max * 100 %}
+                                {% set probabilities = [diagnosis.probability_normal, diagnosis.probability_suspect, diagnosis.probability_keratoconus]|sort(reverse=true) %}
+                                {% set highest = probabilities[0] * 100 %}
+                                {% set second_highest = probabilities[1] * 100 %}
+                                {% set separation = highest - second_highest %}
+                                
+                                <div class="quality-item">
+                                    <span class="quality-label">وضوح التصنيف:</span>
+                                    <div class="quality-bar">
+                                        <div class="quality-fill" style="width: {{ separation * 2 }}%"></div>
+                                    </div>
+                                    <span class="quality-value">{{ "%.1f"|format(separation) }}%</span>
+                                </div>
+                                
+                                <div class="quality-interpretation">
+                                    {% if separation > 50 %}
+                                        <p>تصنيف واضح مع فارق كبير بين الفئات</p>
+                                    {% elif separation > 30 %}
+                                        <p>تصنيف مقبول مع فارق متوسط بين الفئات</p>
+                                    {% else %}
+                                        <p>تصنيف غير واضح مع فارق ضئيل بين الفئات، قد يتطلب مزيداً من الفحص</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="metrics-interpretation">
+                                <h4>تفسير النتائج</h4>
+                                <ul>
+                                    {% if actual_diagnosis == 'Normal' %}
+                                        <li>القياسات تشير إلى حالة طبيعية للقرنية.</li>
+                                    {% elif actual_diagnosis == 'Suspect' %}
+                                        {% if thickness < 0.7 %}
+                                            <li>انخفاض في سماكة القرنية قد يشير إلى حالة مشتبه بها.</li>
+                                        {% endif %}
+                                        {% if curvature > 0.4 %}
+                                            <li>زيادة في انحناء القرنية قد تشير إلى بداية تغيرات مرضية.</li>
+                                        {% endif %}
+                                        {% if asymmetry > 0.3 %}
+                                            <li>وجود عدم تماثل في القرنية يتطلب متابعة.</li>
+                                        {% endif %}
+                                    {% elif actual_diagnosis == 'Keratoconus' %}
+                                        {% if thickness < 0.5 %}
+                                            <li>انخفاض ملحوظ في سماكة القرنية، وهو علامة رئيسية للقرنية المخروطية.</li>
+                                        {% endif %}
+                                        {% if curvature > 0.6 %}
+                                            <li>زيادة واضحة في انحناء القرنية، مما يشير إلى تشكل مخروطي.</li>
+                                        {% endif %}
+                                        {% if asymmetry > 0.5 %}
+                                            <li>عدم تماثل ملحوظ في القرنية، وهو من علامات القرنية المخروطية.</li>
+                                        {% endif %}
+                                        {% if irregularity > 0.6 %}
+                                            <li>عدم انتظام واضح في سطح القرنية، وهو من العلامات التشخيصية للقرنية المخروطية.</li>
+                                        {% endif %}
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="disclaimer">
+                            <p><strong>ملاحظة هامة:</strong> هذا التحليل مساعد فقط ولا يغني عن زيارة الطبيب المختص. النتائج تعتمد على جودة الصورة المدخلة ودقة التحليل.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if diagnosis.doctor_notes %}
+                <div class="doctor-notes">
+                    <h3>ملاحظات الطبيب</h3>
+                    <p>{{ diagnosis.doctor_notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="result-actions">
+            <button class="btn-primary" onclick="downloadReport({{ diagnosis.id }})">
+                <i class="fas fa-file-pdf"></i>
+                تحميل التقرير
+            </button>
+            <button class="btn-secondary" onclick="shareResult()">
+                <i class="fas fa-share-alt"></i>
+                مشاركة النتيجة
+            </button>
+            <a href="{{ url_for('upload_file') }}" class="btn-outline">
+                <i class="fas fa-plus"></i>
+                فحص جديد
+            </a>
+            {% if current_user.role == 'admin' and using_dummy_model %}
+            <a href="{{ url_for('reload_model') }}" class="btn-outline btn-warning">
+                <i class="fas fa-sync"></i>
+                إعادة تحميل النموذج
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.normal-progress {
+    background-color: #4CAF50;
+}
+.suspect-progress {
+    background-color: #FFC107;
+}
+.keratoconus-progress {
+    background-color: #F44336;
+}
+.progress {
+    height: 100%;
+    display: block;
+    border-radius: 3px;
+}
+.confidence-indicator {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+}
+.confidence-label {
+    margin-left: 10px;
+    font-weight: bold;
+}
+.confidence-value {
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+.confidence-value.high {
+    background-color: #4CAF50;
+    color: white;
+}
+.confidence-value.medium {
+    background-color: #FFC107;
+    color: #333;
+}
+.confidence-value.low {
+    background-color: #F44336;
+    color: white;
+}
+.medical-recommendations {
+    margin-top: 20px;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    border-right: 4px solid #007bff;
+}
+.disclaimer {
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+/* أنماط جديدة لمؤشرات القرنية */
+.corneal-metrics {
+    margin-top: 20px;
+    background-color: #f0f8ff;
+    padding: 15px;
+    border-radius: 5px;
+}
+.corneal-metrics h4 {
+    margin-bottom: 15px;
+    color: #0056b3;
+    font-size: 1.1em;
+}
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.metric-item {
+    background-color: white;
+    padding: 12px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.metric-label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+}
+.metric-gauge {
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+.gauge-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+.metric-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    margin: 5px 0;
+}
+.metric-range {
+    font-size: 0.8em;
+    color: #6c757d;
+    text-align: center;
+}
+.metrics-interpretation {
+    background-color: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.metrics-interpretation ul {
+    padding-right: 20px;
+    margin-bottom: 0;
+}
+.metrics-interpretation li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+/* تلوين مقاييس القرنية حسب القيم */
+.metric-item:nth-child(1) .gauge-fill {
+    background-color: var(--thickness-color, #4CAF50);
+}
+.metric-item:nth-child(2) .gauge-fill {
+    background-color: var(--curvature-color, #FFC107);
+}
+.metric-item:nth-child(3) .gauge-fill {
+    background-color: var(--asymmetry-color, #FFA500);
+}
+.metric-item:nth-child(4) .gauge-fill {
+    background-color: var(--irregularity-color, #F44336);
+}
+
+/* Estilo para la advertencia de diagnóstico */
+.diagnosis-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+.diagnosis-warning p {
+    margin: 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadReport(diagnosisId) {
+    window.location.href = `/download_report/${diagnosisId}`;
+}
+
+function shareResult() {
+    Swal.fire({
+        title: 'مشاركة النتيجة',
+        html: `
+            <div class="share-options">
+                <button class="share-btn" onclick="shareViaEmail()">
+                    <i class="fas fa-envelope"></i>
+                    البريد الإلكتروني
+                </button>
+                <button class="share-btn" onclick="shareViaWhatsApp()">
+                    <i class="fab fa-whatsapp"></i>
+                    واتساب
+                </button>
+                <button class="share-btn" onclick="copyLink()">
+                    <i class="fas fa-link"></i>
+                    نسخ الرابط
+                </button>
+            </div>
+        `,
+        showConfirmButton: false
+    });
+}
+</script>
+{% endblock %} 

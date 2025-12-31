@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}فحص جديد{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <div class="upload-header">
+        <h1>فحص جديد</h1>
+        <p>قم برفع صورة القرنية للحصول على التشخيص الفوري</p>
+    </div>
+
+    <div class="upload-content">
+        <div class="upload-instructions">
+            <h3>إرشادات الفحص</h3>
+            <ul>
+                <li>
+                    <i class="fas fa-image"></i>
+                    تأكد من أن الصورة واضحة وبجودة عالية
+                </li>
+                <li>
+                    <i class="fas fa-expand"></i>
+                    الحجم المثالي للصورة 224×224 بكسل
+                </li>
+                <li>
+                    <i class="fas fa-file-image"></i>
+                    الصيغ المدعومة: JPG, JPEG, PNG
+                </li>
+            </ul>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="uploadForm" class="upload-form">
+            <div class="upload-area" id="dropZone">
+                <div class="upload-placeholder">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <h3>اسحب وأفلت الصورة هنا</h3>
+                    <p>أو</p>
+                    <label class="upload-btn" for="fileInput">
+                        اختيار ملف
+                        <input type="file" name="file" id="fileInput" accept="image/*" hidden>
+                    </label>
+                </div>
+                <div class="upload-preview" style="display: none;">
+                    <img id="imagePreview" src="" alt="معاينة الصورة">
+                    <button type="button" class="btn-icon remove-image" onclick="removeImage()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const uploadPlaceholder = document.querySelector('.upload-placeholder');
+const uploadPreview = document.querySelector('.upload-preview');
+const imagePreview = document.getElementById('imagePreview');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+    dropZone.classList.add('highlight');
+}
+
+function unhighlight(e) {
+    dropZone.classList.remove('highlight');
+}
+
+dropZone.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    handleFiles(files);
+}
+
+fileInput.addEventListener('change', function() {
+    handleFiles(this.files);
+});
+
+function handleFiles(files) {
+    if (files.length) {
+        const file = files[0];
+        if (validateFile(file)) {
+            showPreview(file);
+            document.getElementById('uploadForm').submit();
+        }
+    }
+}
+
+function validateFile(file) {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+        Swal.fire({
+            title: 'خطأ!',
+            text: 'يرجى اختيار ملف صورة صالح (JPG, JPEG, PNG)',
+            icon: 'error',
+            confirmButtonText: 'حسناً'
+        });
+        return false;
+    }
+    return true;
+}
+
+function showPreview(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        imagePreview.src = e.target.result;
+        uploadPlaceholder.style.display = 'none';
+        uploadPreview.style.display = 'block';
+    }
+    reader.readAsDataURL(file);
+}
+
+function removeImage() {
+    fileInput.value = '';
+    uploadPlaceholder.style.display = 'flex';
+    uploadPreview.style.display = 'none';
+    imagePreview.src = '';
+}
+</script>
+{% endblock %} 
